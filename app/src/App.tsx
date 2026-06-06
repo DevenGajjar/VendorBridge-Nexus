@@ -6,7 +6,15 @@ import VendorManagement from './pages/VendorManagement';
 import VendorWizard from './pages/VendorWizard';
 import RFQManagement from './pages/RFQManagement';
 import QuotationComparison from './pages/QuotationComparison';
+import VendorQuotations from './pages/VendorQuotations';
+import QuotationSubmission from './pages/QuotationSubmission';
 import ApprovalWorkflow from './pages/ApprovalWorkflow';
+
+function QuotationPage() {
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const isVendor = user?.role?.name === "VENDOR";
+  return isVendor ? <VendorQuotations /> : <QuotationComparison />;
+}
 import PurchaseOrders from './pages/PurchaseOrders';
 import InvoiceGeneration from './pages/InvoiceGeneration';
 import ReportsAnalytics from './pages/ReportsAnalytics';
@@ -44,7 +52,8 @@ export default function App() {
             <Route path="/vendors" element={<VendorManagement />} />
             <Route path="/vendors/new" element={<VendorWizard />} />
             <Route path="/rfq" element={<RFQManagement />} />
-            <Route path="/quotations" element={<QuotationComparison />} />
+            <Route path="/quotations" element={<QuotationPage />} />
+            <Route path="/quotations/new" element={<QuotationSubmission />} />
             <Route path="/approvals" element={<ApprovalWorkflow />} />
             <Route path="/orders" element={<PurchaseOrders />} />
             <Route path="/invoices" element={<InvoiceGeneration />} />

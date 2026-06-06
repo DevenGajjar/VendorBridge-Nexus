@@ -193,8 +193,34 @@ class RFQService:
         page_size: int = 10,
         search: Optional[str] = None,
         sort: Optional[str] = None,
-        filters: Optional[Dict[str, Any]] = None
+        filters: Optional[Dict[str, Any]] = None,
+        vendor_id: Optional[uuid.UUID] = None
     ) -> Tuple[List[RFQ], int]:
+        if vendor_id:
+            from app.models import RFQVendor
+            from sqlalchemy import select, func, desc, asc, or_
+            
+            query = select(RFQ).join(RFQVendor).where(RFQVendor.vendor_id == vendor_id)
+            
+            # Apply Filters (duplicated logic from get_multi but specialized)
+            if filters:
+                for field, val in filters.items():
+                    if hasattr(RFQ, field) and val is not None:
+                        query = query.where(getattr(RFQ, field) == val)
+            
+            if search:
+                search_fields = ["title", "rfq_number", "description"]
+                search_filters = [getattr(RFQ, f).ilike(f"%{search}%") for f in search_fields if hasattr(RFQ, f)]
+                if search_filters:
+                    query = query.where(or_(*search_filters))
+            
+            count_query = select(func.count()).select_from(query.subquery())
+            total = db.scalar(count_query) or 0
+            
+            query = query.order_by(desc(RFQ.created_at)).offset((page - 1) * page_size).limit(page_size)
+            items = db.scalars(query).all()
+            return list(items), total
+
         return rfq_repo.get_multi(
             db,
             page=page,

@@ -214,6 +214,27 @@ export default function PurchaseOrders() {
                       <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Total Amount</p>
                       <p className="text-2xl font-bold font-mono text-white">${selected.amount.toLocaleString()}</p>
                     </div>
+                    
+                    {selected.status === 'Pending' && localStorage.getItem('role') === 'VENDOR' && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await apiFetch(`/purchase-orders/${selected.dbId}`, {
+                              method: 'PUT',
+                              json: { status: 'ACCEPTED' }
+                            });
+                            if (res && res.success) {
+                              window.location.reload();
+                            }
+                          } catch (err) {
+                            console.error("Failed to accept PO:", err);
+                          }
+                        }}
+                        className="px-4 py-2 bg-[#10B981] hover:bg-[#059669] text-white text-xs font-bold rounded-lg transition-all"
+                      >
+                        Accept PO
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

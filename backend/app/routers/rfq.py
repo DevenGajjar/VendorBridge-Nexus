@@ -97,10 +97,27 @@ def list_rfqs(
 ):
     """
     List RFQs with search, status filters, sorting, and pagination.
+    VENDORS only see RFQs they are assigned to.
     """
     filters = {}
     if status_filter:
         filters["status"] = status_filter
+
+    # If VENDOR, filter by assignment
+    vendor_id = None
+    if current_user.role and current_user.role.name == "VENDOR":
+        from app.models import Vendor
+        from sqlalchemy import select
+        vendor = db.scalar(select(Vendor).where(Vendor.user_id == current_user.id))
+        if vendor:
+            vendor_id = vendor.id
+        else:
+            # Vendor user not linked to a vendor profile yet
+            return PaginatedResponse(
+                success=True,
+                message="No vendor profile linked to this user.",
+                data=PaginatedData(items=[], meta=PaginationMeta(total_count=0, page=page, page_size=page_size, total_pages=0))
+            )
 
     items, total = RFQService.get_rfqs(
         db,
@@ -108,7 +125,8 @@ def list_rfqs(
         page_size=page_size,
         search=search,
         sort=sort,
-        filters=filters
+        filters=filters,
+        vendor_id=vendor_id
     )
     
     total_pages = (total + page_size - 1) // page_size

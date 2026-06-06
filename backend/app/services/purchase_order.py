@@ -50,7 +50,7 @@ class PurchaseOrderService:
             po_number=po_num,
             quotation_id=quotation.id,
             vendor_id=quotation.vendor_id,
-            status="DRAFT",
+            status="SENT",
             total_amount=quotation.total_amount,
             delivery_date=po_in.delivery_date,
             created_by_id=current_user_id

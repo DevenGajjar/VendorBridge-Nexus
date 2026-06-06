@@ -36,10 +36,10 @@ class InvoiceService:
             )
         
         # Verify PO status
-        if po.status not in ["ACCEPTED", "DELIVERED"]:
+        if po.status not in ["SENT", "ACCEPTED", "DELIVERED"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot generate invoice: Purchase Order status is {po.status}. It must be ACCEPTED or DELIVERED first."
+                detail=f"Cannot generate invoice: Purchase Order status is {po.status}. It must be SENT, ACCEPTED or DELIVERED first."
             )
 
         # Generate Invoice Code
@@ -82,13 +82,26 @@ class InvoiceService:
                     message=f"An invoice {invoice_num} has been issued for Purchase Order {po.po_number}."
                 )
 
-        # Notify PO Creator
-        NotificationService.create_notification(
-            db,
-            user_id=po.created_by_id,
-            title="Invoice Generated",
-            message=f"Invoice {invoice_num} generated for Purchase Order {po.po_number}."
-        )
+        # Notify PO Creator via System and Email
+        if po.created_by:
+            NotificationService.create_notification(
+                db,
+                user_id=po.created_by_id,
+                title="Invoice Generated",
+                message=f"Invoice {invoice_num} generated for Purchase Order {po.po_number}."
+            )
+            
+            try:
+                EmailService.send_invoice_notification(
+                    recipient_email=po.created_by.email,
+                    invoice_number=invoice_num,
+                    po_number=po.po_number,
+                    total_amount=float(db_invoice.total_amount),
+                    due_date=due_date_str,
+                    pdf_path=pdf_path
+                )
+            except Exception:
+                pass
 
         # Log Action
         AuditService.log_action(

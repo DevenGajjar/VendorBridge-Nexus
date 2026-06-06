@@ -169,8 +169,8 @@ export default function Dashboard() {
         break;
       case 'VENDOR':
         actions = [
-          { label: 'Submit Quotation', icon: ClipboardList, path: '/quotations', color: '#F59E0B' },
-          { label: 'View RFP Invites', icon: FileText, path: '/rfq', color: '#4F46E5' },
+          { label: 'My Quotations', icon: ClipboardList, path: '/quotations', color: '#F59E0B' },
+          { label: 'Open RFQs', icon: FileText, path: '/rfq', color: '#4F46E5' },
           { label: 'Manage Profile', icon: UserCheck, path: '/profile', color: '#10B981' },
         ];
         break;

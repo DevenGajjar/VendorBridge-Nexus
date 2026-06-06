@@ -12,6 +12,9 @@ export default function RFQManagement() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [loaded, setLoaded] = useState(false);
 
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const isVendor = user?.role?.name === "VENDOR";
+
   // Creation modal states
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState('');
@@ -206,6 +209,7 @@ export default function RFQManagement() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
+            onClick={() => navigate(isVendor ? '/quotations/new?rfq_id=' + rfq.id : '/quotations?rfq_id=' + rfq.id)}
             className="bg-[#111827] border border-white/5 rounded-xl p-6 hover:border-[#4F46E5]/30 transition-all cursor-pointer group"
           >
             <div className="flex items-start justify-between">
@@ -241,10 +245,9 @@ export default function RFQManagement() {
                 </div>
               </div>
               <button
-                onClick={() => navigate('/quotations?rfq_id=' + rfq.id)}
                 className="flex items-center gap-1 px-3 py-2 bg-[#1B2240] rounded-lg text-xs text-[#94A3B8] hover:text-white hover:bg-[#4F46E5]/20 transition-all opacity-0 group-hover:opacity-100"
               >
-                Compare Quotes
+                {isVendor ? 'Submit Quote' : 'Compare Quotes'}
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>

@@ -59,11 +59,13 @@ export default function InvoiceGeneration() {
     try {
       const res = await apiFetch("/purchase-orders?page=1&page_size=100");
       if (res && res.success && res.data && res.data.items) {
-        // Only allow POs that are Approved / ACCEPTED
-        const approvedPOs = res.data.items.filter((po: any) => po.status === 'ACCEPTED');
-        setPurchaseOrders(approvedPOs);
-        if (approvedPOs.length > 0) {
-          setSelectedPoId(approvedPOs[0].id);
+        // Allow POs that are SENT (Pending) or ACCEPTED (Approved)
+        const eligiblePOs = res.data.items.filter((po: any) => 
+          po.status === 'ACCEPTED' || po.status === 'SENT'
+        );
+        setPurchaseOrders(eligiblePOs);
+        if (eligiblePOs.length > 0) {
+          setSelectedPoId(eligiblePOs[0].id);
         }
       }
     } catch (err) {
@@ -291,11 +293,18 @@ export default function InvoiceGeneration() {
                   PDF Download
                 </a>
                 <button
-                  onClick={() => setShowEmailModal(true)}
+                  onClick={() => {
+                    if (selected) {
+                      const vendorEmail = `accounts@${selected.vendor.toLowerCase().replace(/\s/g, '')}.com`;
+                      const subject = encodeURIComponent(`RE: Invoice ${selected.id} - ${selected.vendor}`);
+                      const body = encodeURIComponent(`Hi ${selected.vendor} team,\n\nI am writing regarding invoice ${selected.id}.\n\n`);
+                      window.location.href = `mailto:${vendorEmail}?subject=${subject}&body=${body}`;
+                    }
+                  }}
                   className="flex items-center gap-2 px-4 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white text-sm font-medium rounded-lg transition-all"
                 >
                   <Mail className="w-4 h-4" />
-                  Email Invoice
+                  Reply to Vendor
                 </button>
               </div>
             </motion.div>

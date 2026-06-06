@@ -33,7 +33,8 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     except ValueError:
         raise credentials_exception
 
-    user = user_repo.get(db, id=user_uuid)
+    from sqlalchemy.orm import joinedload
+    user = db.query(User).options(joinedload(User.role)).filter(User.id == user_uuid).first()
     if user is None:
         raise credentials_exception
 

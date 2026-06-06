@@ -129,6 +129,22 @@ class ApprovalService:
             if entity:
                 entity.status = "ACCEPTED" if action_in.status == "APPROVED" else "REJECTED"
                 db.add(entity)
+                
+                # Automatically generate Purchase Order if approved
+                if action_in.status == "APPROVED":
+                    from app.services.purchase_order import PurchaseOrderService
+                    from app.schemas.purchase_order import PurchaseOrderCreate
+                    
+                    try:
+                        po_in = PurchaseOrderCreate(quotation_id=entity.id)
+                        PurchaseOrderService.generate_purchase_order(
+                            db, 
+                            po_in=po_in, 
+                            current_user_id=current_user_id
+                        )
+                    except Exception as e:
+                        # Log error but don't fail the approval action
+                        print(f"Failed to auto-generate PO: {e}")
         elif req.entity_type == "PURCHASE_ORDER":
             entity = purchase_order_repo.get(db, id=req.entity_id)
             if entity:

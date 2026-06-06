@@ -104,12 +104,28 @@ def list_quotations(
 ):
     """
     List quotations with filters and sorting.
+    VENDORS only see their own quotations.
     """
     filters = {}
     if status_filter:
         filters["status"] = status_filter
-    if vendor_id:
+    
+    # Force vendor_id for VENDOR role
+    if current_user.role and current_user.role.name == "VENDOR":
+        from app.models import Vendor
+        from sqlalchemy import select
+        vendor = db.scalar(select(Vendor).where(Vendor.user_id == current_user.id))
+        if vendor:
+            filters["vendor_id"] = vendor.id
+        else:
+            return PaginatedResponse(
+                success=True,
+                message="No vendor profile linked to this user.",
+                data=PaginatedData(items=[], meta=PaginationMeta(total_count=0, page=page, page_size=page_size, total_pages=0))
+            )
+    elif vendor_id:
         filters["vendor_id"] = vendor_id
+
     if rfq_id:
         filters["rfq_id"] = rfq_id
 
