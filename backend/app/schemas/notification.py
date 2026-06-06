@@ -7,6 +7,11 @@ class NotificationCreate(BaseModel):
     title: str
     message: str
 
+class ExternalNotificationCreate(BaseModel):
+    recipient_email: str
+    title: str
+    message: str
+
 class NotificationResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID

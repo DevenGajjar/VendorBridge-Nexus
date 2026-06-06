@@ -8,7 +8,6 @@ import { apiFetch } from '@/lib/api';
 export default function InvoiceGeneration() {
   const [search, setSearch] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<string | null>(null);
-  const [showEmailModal, setShowEmailModal] = useState(false);
   
   // Invoice generation states
   const [showGenModal, setShowGenModal] = useState(false);
@@ -18,8 +17,18 @@ export default function InvoiceGeneration() {
   
   const [loaded, setLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailTo, setEmailTo] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const userRole = currentUser?.role?.name || '';
+  const isVendor = userRole === 'VENDOR';
 
   async function loadInvoices() {
     try {
@@ -109,6 +118,44 @@ export default function InvoiceGeneration() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSendEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionLoading(true);
+    try {
+      await apiFetch("/notifications/send-by-email", {
+        method: 'POST',
+        json: {
+          recipient_email: emailTo,
+          title: emailSubject,
+          message: emailBody
+        }
+      });
+      setSuccess(`Email notification sent to ${emailTo}!`);
+      setShowEmailModal(false);
+    } catch (err: any) {
+      setError(err.message || "Failed to send notification.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const openEmailModal = () => {
+    if (!selected) return;
+    
+    if (isVendor) {
+      setEmailTo(''); // Vendor enters recipient manually
+      setEmailSubject(`Invoice ${selected.id} - ${selected.vendor}`);
+      setEmailBody(`Please find attached the invoice for your review and payment.`);
+    } else {
+      // PO Officer replies to vendor
+      const vendorEmail = `accounts@${selected.vendor.toLowerCase().replace(/\s/g, '')}.com`;
+      setEmailTo(vendorEmail);
+      setEmailSubject(`RE: Invoice ${selected.id} - ${selected.vendor}`);
+      setEmailBody(`Hi ${selected.vendor} team,\n\nI am writing regarding invoice ${selected.id}.\n\n`);
+    }
+    setShowEmailModal(true);
   };
 
   const filtered = invoiceData.filter((inv) =>
@@ -293,18 +340,11 @@ export default function InvoiceGeneration() {
                   PDF Download
                 </a>
                 <button
-                  onClick={() => {
-                    if (selected) {
-                      const vendorEmail = `accounts@${selected.vendor.toLowerCase().replace(/\s/g, '')}.com`;
-                      const subject = encodeURIComponent(`RE: Invoice ${selected.id} - ${selected.vendor}`);
-                      const body = encodeURIComponent(`Hi ${selected.vendor} team,\n\nI am writing regarding invoice ${selected.id}.\n\n`);
-                      window.location.href = `mailto:${vendorEmail}?subject=${subject}&body=${body}`;
-                    }
-                  }}
+                  onClick={openEmailModal}
                   className="flex items-center gap-2 px-4 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white text-sm font-medium rounded-lg transition-all"
                 >
                   <Mail className="w-4 h-4" />
-                  Reply to Vendor
+                  {isVendor ? 'Email Invoice' : 'Reply Vendor'}
                 </button>
               </div>
             </motion.div>
@@ -408,13 +448,18 @@ export default function InvoiceGeneration() {
               onClick={(e) => e.stopPropagation()}
               className="bg-[#111827] border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4"
             >
-              <h3 className="text-lg font-semibold text-white mb-4">Email Invoice</h3>
-              <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-white mb-4">
+                {isVendor ? 'Email Invoice' : 'Reply to Vendor'}
+              </h3>
+              <form onSubmit={handleSendEmail} className="space-y-4">
                 <div>
-                  <label className="block text-xs text-[#94A3B8] mb-1.5">To</label>
+                  <label className="block text-xs text-[#94A3B8] mb-1.5">Recipient Email</label>
                   <input
                     type="email"
-                    defaultValue={selected ? `accounts@${selected.vendor.toLowerCase().replace(/\s/g, '')}.com` : ''}
+                    required
+                    value={emailTo}
+                    onChange={(e) => setEmailTo(e.target.value)}
+                    placeholder="Enter recipient email..."
                     className="w-full bg-[#090C18] border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white outline-none focus:border-[#4F46E5] transition-all"
                   />
                 </div>
@@ -422,33 +467,39 @@ export default function InvoiceGeneration() {
                   <label className="block text-xs text-[#94A3B8] mb-1.5">Subject</label>
                   <input
                     type="text"
-                    defaultValue={`Invoice ${selected?.id} - ${selected?.vendor}`}
+                    required
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
                     className="w-full bg-[#090C18] border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white outline-none focus:border-[#4F46E5] transition-all"
                   />
                 </div>
                 <div>
                   <label className="block text-xs text-[#94A3B8] mb-1.5">Message</label>
                   <textarea
-                    rows={3}
-                    defaultValue="Please find attached the invoice for your review and payment."
+                    rows={4}
+                    required
+                    value={emailBody}
+                    onChange={(e) => setEmailBody(e.target.value)}
                     className="w-full bg-[#090C18] border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white outline-none focus:border-[#4F46E5] transition-all resize-none"
                   />
                 </div>
-              </div>
-              <div className="flex items-center justify-end gap-3 mt-6">
-                <button
-                  onClick={() => setShowEmailModal(false)}
-                  className="px-4 py-2 text-sm text-[#94A3B8] hover:text-white transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => setShowEmailModal(false)}
-                  className="px-4 py-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white text-sm font-medium rounded-lg transition-all"
-                >
-                  Send Email
-                </button>
-              </div>
+                <div className="flex items-center justify-end gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmailModal(false)}
+                    className="px-4 py-2 text-sm text-[#94A3B8] hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50"
+                  >
+                    {actionLoading ? 'Sending...' : 'Send Notification'}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </motion.div>
         )}
